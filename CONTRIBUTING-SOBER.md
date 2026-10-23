@@ -20,7 +20,7 @@ Windows/Android and the Apple targets on a supported host. Pure geometry/bitmap 
 production source; they do not prove native camera behavior. Native camera checks remain required.
 
 tools/Pack-Sober.ps1 requires an explicit immutable internal version and output folder. It passes
-NuGetPackageVersion to Nerdbank.GitVersioning, so all five face packages and dependencies agree.
+PublicRelease to Nerdbank.GitVersioning and verifies version.json, so all five face packages and dependencies agree.
 Publish these packages to the private feed; do not enable the inherited public NuGet workflow.
 An own-feed URL/token must be supplied by the owning environment; never commit credentials.
 
