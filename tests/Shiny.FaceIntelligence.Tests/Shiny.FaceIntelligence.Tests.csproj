@@ -25,6 +25,8 @@
         <!-- These pure geometry sources have no controls/platform dependencies. -->
         <Compile Include="../../src/Shiny.FaceIntelligence.Maui/FaceGuide.cs" Link="Geometry/FaceGuide.cs" />
         <Compile Include="../../src/Shiny.FaceIntelligence.Maui/Internals/FaceGuideDrawable.cs" Link="Geometry/FaceGuideDrawable.cs" />
+        <!-- Exercise the actual shared bitmap operations without a native camera/workload. -->
+        <Compile Include="../../src/Shiny.FaceIntelligence.Maui/Internals/FrameImageConverter.cs" Link="Imaging/FrameImageConverter.cs" />
     </ItemGroup>
 
     <ItemGroup>
