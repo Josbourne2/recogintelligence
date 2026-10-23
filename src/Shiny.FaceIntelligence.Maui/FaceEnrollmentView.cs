@@ -43,6 +43,7 @@ public class FaceEnrollmentView : ContentView
     readonly Label instructionLabel;
     readonly Label hintLabel;
     readonly Label progressLabel;
+    readonly Border banner;
 
     readonly List<AnalyzedFace> captured = [];
     readonly List<float[]> capturedEmbeddings = [];
@@ -95,7 +96,7 @@ public class FaceEnrollmentView : ContentView
             HorizontalTextAlignment = TextAlignment.Center
         };
 
-        var banner = new Border
+        this.banner = new Border
         {
             BackgroundColor = Color.FromArgb("#CC000000"),
             StrokeShape = new RoundRectangle { CornerRadius = 14 },
@@ -116,7 +117,7 @@ public class FaceEnrollmentView : ContentView
             InputTransparent = true
         };
 
-        this.Content = new Grid { Children = { this.camera, this.guideOverlay, banner } };
+        this.Content = new Grid { Children = { this.camera, this.guideOverlay, this.banner } };
 
         this.camera.HandlerChanged += (_, _) => this.Start();
         this.Loaded += (_, _) =>
@@ -209,6 +210,22 @@ public class FaceEnrollmentView : ContentView
     /// <summary>Raised once every step is done and all shots have been enrolled.</summary>
     public event EventHandler<FaceEnrollmentResult>? Completed;
 
+    /// <summary>Raised only after a shot has actually been persisted, before the next step.</summary>
+    public event EventHandler<FaceEnrollmentCapture>? CaptureAccepted;
+
+    /// <summary>Disable new candidate acceptance without deleting or restarting the run.</summary>
+    public bool CaptureEnabled { get; set; } = true;
+
+    /// <summary>Time for caller-owned accepted-shot feedback before progressing. Zero retains prior behavior.</summary>
+    public TimeSpan AcceptedHoldDuration { get; set; }
+
+    /// <summary>Allows a caller-owned overlay; camera and quality/alignment gates remain inside this control.</summary>
+    public bool ShowBuiltInOverlay
+    {
+        get => this.guideOverlay.IsVisible;
+        set { this.guideOverlay.IsVisible = value; this.banner.IsVisible = value; }
+    }
+
     /// <summary>Raised when the camera can't be started, with the reason.</summary>
     public event EventHandler<string>? CameraFailed;
 
@@ -252,6 +269,13 @@ public class FaceEnrollmentView : ContentView
         this.ReportProgress();
         this.hintLabel.Text = $"Get ready… {this.countdownRemaining}";
 
+        if (this.StepCountdown <= TimeSpan.Zero)
+        {
+            this.armed = true;
+            this.armedAt = DateTimeOffset.UtcNow;
+            return;
+        }
+
         this.countdownTimer ??= this.CreateCountdownTimer();
         this.countdownTimer.Stop();
         this.countdownTimer.Start();
@@ -283,7 +307,7 @@ public class FaceEnrollmentView : ContentView
     {
         this.stepIndex++;
         this.armed = false;
-        if (this.stepIndex >= this.Steps.Count)
+        if (this.stepIndex >= this.runSteps.Length)
             this.Finish();
         else
             this.BeginStep();
@@ -479,7 +503,7 @@ public class FaceEnrollmentView : ContentView
 
     void OnFaceDetected(object? sender, AnalyzedFace face)
     {
-        if (!this.running || this.run is null || this.run.IsCancelled || this.stepIndex >= this.runSteps.Length)
+        if (!this.CaptureEnabled || !this.running || this.run is null || this.run.IsCancelled || this.stepIndex >= this.runSteps.Length)
         {
             this.guideDrawable.Face = null;
             this.guideOverlay.Invalidate();
@@ -603,6 +627,12 @@ public class FaceEnrollmentView : ContentView
             this.captured.Add(face);
             if (verdict.Embedding is { } vec)
                 this.capturedEmbeddings.Add(vec);
+
+            this.CaptureAccepted?.Invoke(this, this.acceptedCaptures[^1]);
+            if (this.AcceptedHoldDuration > TimeSpan.Zero)
+                await Task.Delay(this.AcceptedHoldDuration);
+            if (!ReferenceEquals(activeRun, this.run) || activeRun.IsCancelled)
+                return;
 
             this.stepIndex++;
             this.armed = false;
