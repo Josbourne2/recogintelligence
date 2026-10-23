@@ -5,6 +5,15 @@ namespace Shiny.FaceIntelligence.Tests;
 public class FaceEnrollmentRunTests
 {
     [Fact]
+    public async Task Cancel_InterruptsAcceptedPresentationDelay()
+    {
+        var run = new FaceEnrollmentRun("7");
+        var hold = Task.Delay(Timeout.InfiniteTimeSpan, run.CancellationToken);
+        await run.CancelAndDrainAsync();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => hold);
+    }
+
+    [Fact]
     public async Task Cancel_DrainsLateStoreAndRetainsItsOriginalIndexForCleanup()
     {
         var stored = new TaskCompletionSource<Person>(TaskCreationOptions.RunContinuationsAsynchronously);
