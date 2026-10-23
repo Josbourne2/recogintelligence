@@ -6,7 +6,22 @@ namespace Sample.Features.Face.Pages;
 // and reports the outcome.
 public partial class EnrollPage : ContentPage
 {
-    public EnrollPage() => this.InitializeComponent();
+    public EnrollPage()
+    {
+        this.InitializeComponent();
+
+        // Same outline for every step; head angle is only instructed, not verified (see FaceEnrollmentStep).
+        var guide = new FaceGuide(0.5f, 0.5f, 0.55f);
+        this.FaceCamera.Steps =
+        [
+            new("Kijk recht in de camera", Guide: guide),
+            new("Kijk naar links", Guide: guide),
+            new("Kijk naar rechts", Guide: guide),
+            new("Kijk naar boven", Guide: guide),
+            new("Kijk naar beneden", Guide: guide),
+            new("Gebruik het blaasapparaat", Guide: guide)
+        ];
+    }
 
     void OnStartClicked(object? sender, EventArgs e)
     {
