@@ -17,6 +17,7 @@ public sealed class FaceEnrollmentRun
 
     public string PersonIdentifier { get; }
     public bool IsCancelled => this.cancellation.IsCancellationRequested;
+    public CancellationToken CancellationToken => this.cancellation.Token;
     public bool HasUncertainStorage { get; private set; }
     public IReadOnlyList<FaceEnrollmentCapture> Captures { get { lock (this.sync) return this.captures.ToArray(); } }
 

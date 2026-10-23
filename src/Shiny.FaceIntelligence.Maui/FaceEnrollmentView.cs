@@ -605,7 +605,7 @@ public class FaceEnrollmentView : ContentView
                 return (null, embedding);
             });
 
-            if (!ReferenceEquals(activeRun, this.run) || activeRun.IsCancelled)
+            if (!ReferenceEquals(activeRun, this.run) || activeRun.IsCancelled || !this.CaptureEnabled)
                 return;
 
             if (verdict.Reason is { } reason)
@@ -630,7 +630,7 @@ public class FaceEnrollmentView : ContentView
 
             this.CaptureAccepted?.Invoke(this, this.acceptedCaptures[^1]);
             if (this.AcceptedHoldDuration > TimeSpan.Zero)
-                await Task.Delay(this.AcceptedHoldDuration);
+                await Task.Delay(this.AcceptedHoldDuration, activeRun.CancellationToken);
             if (!ReferenceEquals(activeRun, this.run) || activeRun.IsCancelled)
                 return;
 
@@ -740,7 +740,7 @@ public class FaceEnrollmentView : ContentView
         {
             var step = this.runSteps[this.stepIndex];
             this.instructionLabel.Text = step.Instruction;
-            this.progressLabel.Text = $"Step {this.stepIndex + 1} of {this.Steps.Count} · {this.captured.Count} captured";
+            this.progressLabel.Text = $"Step {this.stepIndex + 1} of {this.runSteps.Length} · {this.captured.Count} captured";
             this.Progress?.Invoke(this, new FaceEnrollmentProgress(
                 this.stepIndex, this.runSteps.Length, step.Instruction, this.captured.Count));
         }
