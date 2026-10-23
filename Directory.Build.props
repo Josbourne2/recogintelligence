@@ -7,8 +7,8 @@
         <Authors>aritchie;ShinyLib</Authors>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <Copyright>Copyright (c) $([System.DateTime]::Now.Year) Allan Ritchie</Copyright>
-        <PackageProjectUrl>https://github.com/shinyorg/recogintelligence</PackageProjectUrl>
-        <RepositoryUrl>https://github.com/shinyorg/recogintelligence</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/Josbourne2/recogintelligence</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/Josbourne2/recogintelligence</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
 
         <PackageIcon>icon.png</PackageIcon>

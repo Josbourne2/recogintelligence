@@ -4,6 +4,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
+if ((& git -C $repo status --porcelain).Count -gt 0) { throw 'Commit the package sources before packing so repository metadata identifies the exact bytes.' }
 $configuredVersion = (Get-Content -LiteralPath (Join-Path $repo 'version.json') -Raw | ConvertFrom-Json).version
 if ($configuredVersion -ne $Version) { throw 'Commit the requested immutable version in version.json before packing.' }
 $projects = @('Shiny.FaceIntelligence', 'Shiny.FaceIntelligence.DocumentDb',

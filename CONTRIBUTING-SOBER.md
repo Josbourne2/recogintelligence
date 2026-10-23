@@ -22,11 +22,16 @@ production source; they do not prove native camera behavior. Native camera check
 tools/Pack-Sober.ps1 requires an explicit immutable internal version and output folder. It passes
 PublicRelease to Nerdbank.GitVersioning and verifies version.json, so all five face packages and dependencies agree.
 Publish these packages to the private feed; do not enable the inherited public NuGet workflow.
-An own-feed URL/token must be supplied by the owning environment; never commit credentials.
+An own-feed URL must be supplied by the owning environment. Authenticate with its credential
+provider; never commit tokens. The consuming Sober app uses a private Azure Artifacts feed.
 
-For local integration, the consuming app's repository-relative artifacts/face-packages source is
-a bootstrap feed, populated by this script. It is not checked in and is not a substitute for hosted
-feed verification. Do not treat a cached restore as a clean-machine hosted-feed test.
+Pack to a local staging directory, then push the five matching `.nupkg` files to the private feed
+using `dotnet nuget push --source <feed-url> --api-key az --interactive --no-symbols`.
+The app restores its pinned revision from the hosted feed with package-source mapping.
+Verify a new revision using a fresh package cache; a cached restore does not prove hosted access.
+Nerdbank.GitVersioning's current SemVer1 format converts `1.0.0-sober.198.3` in version.json to
+`1.0.0-sober-0198-0003` in NuGet. Use the latter exact version in consumers. Never overwrite a
+published version. SourceLink repository metadata points to this fork and the committed package source.
 
 No upstream pull requests are created automatically. Each branch remains available for separate
 review/submission at the user's request. Application/client IDs, captions, routes and enrollment
