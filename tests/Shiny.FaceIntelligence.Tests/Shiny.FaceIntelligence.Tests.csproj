@@ -25,6 +25,11 @@
         <!-- These pure geometry sources have no controls/platform dependencies. -->
         <Compile Include="../../src/Shiny.FaceIntelligence.Maui/FaceGuide.cs" Link="Geometry/FaceGuide.cs" />
         <Compile Include="../../src/Shiny.FaceIntelligence.Maui/Internals/FaceGuideDrawable.cs" Link="Geometry/FaceGuideDrawable.cs" />
+        <Compile Include="../../src/Shiny.FaceIntelligence.Maui/FaceRecognitionAnalyzer.cs" Link="Camera/FaceRecognitionAnalyzer.cs" />
+        <Compile Include="../../src/Shiny.FaceIntelligence.Maui/FaceRecognizedEventArgs.cs" Link="Camera/FaceRecognizedEventArgs.cs" />
+        <Compile Include="../../src/Shiny.FaceIntelligence.Maui/FaceFrameObservation.cs" Link="Camera/FaceFrameObservation.cs" />
+        <Compile Include="../../src/Shiny.FaceIntelligence.Maui/AnalyzedFace.cs" Link="Camera/AnalyzedFace.cs" />
+        <Compile Include="../../src/Shiny.FaceIntelligence.Maui/Internals/FrameQuality.cs" Link="Camera/FrameQuality.cs" />
         <!-- Exercise the actual shared bitmap operations without a native camera/workload. -->
         <Compile Include="../../src/Shiny.FaceIntelligence.Maui/Internals/FrameImageConverter.cs" Link="Imaging/FrameImageConverter.cs" />
     </ItemGroup>
