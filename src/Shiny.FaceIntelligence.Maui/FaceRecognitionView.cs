@@ -33,7 +33,7 @@ namespace Shiny.FaceIntelligence.Maui;
 public class FaceRecognitionView : ContentView
 {
     readonly CameraView camera;
-    FaceRecognitionAnalyzer? analyzer;
+    IFaceRecognitionAnalyzer? analyzer;
     bool started;
     long lifecycle;
     Task stopWork = Task.CompletedTask;
@@ -119,7 +119,7 @@ public class FaceRecognitionView : ContentView
     /// The underlying analyzer once the control has resolved it, for tuning (<c>StabilityFrames</c>,
     /// <c>RecognitionInterval</c>, <c>MinConfidence</c>, box colors). <c>null</c> before the handler connects.
     /// </summary>
-    public FaceRecognitionAnalyzer? Analyzer => this.analyzer;
+    public IFaceRecognitionAnalyzer? Analyzer => this.analyzer;
 
     /// <summary>
     /// Enroll the face the analyzer is currently looking at, under <paramref name="personIdentifier"/>. Returns the
@@ -176,18 +176,18 @@ public class FaceRecognitionView : ContentView
     {
         if (this.analyzer is not null)
         {
-            this.camera.Analyzer = this.analyzer;
+            this.camera.Analyzer = this.analyzer.NativeAnalyzer;
             return;
         }
 
-        this.analyzer = this.Resolve<FaceRecognitionAnalyzer>();
+        this.analyzer = this.Resolve<IFaceRecognitionAnalyzer>();
         if (this.analyzer is null)
             return;
 
         this.analyzer.RecognitionEnabled = this.RecognitionEnabled;
         this.analyzer.FaceRecognized += (s, e) => this.FaceRecognized?.Invoke(this, e);
         this.analyzer.FrameObserved += (s, e) => this.FrameObserved?.Invoke(this, e);
-        this.camera.Analyzer = this.analyzer;
+        this.camera.Analyzer = this.analyzer.NativeAnalyzer;
         AnalyzerReady?.Invoke(this, EventArgs.Empty);
     }
 
@@ -204,7 +204,7 @@ public class FaceRecognitionView : ContentView
             await stopWork;
             if (generation != lifecycle || !IsActive || camera.Handler is null) return;
             analyzer?.BeginSession();
-            this.camera.Analyzer = analyzer;
+            this.camera.Analyzer = analyzer?.NativeAnalyzer;
             if (!await this.camera.RequestPermissionAsync())
             {
                 this.started = false;

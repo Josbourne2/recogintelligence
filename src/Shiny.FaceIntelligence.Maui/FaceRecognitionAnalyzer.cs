@@ -36,10 +36,17 @@ public class FaceRecognitionAnalyzer : FrameAnalyzer, IFaceRecognitionAnalyzer
     Task recognitionWork = Task.CompletedTask;
     long frameId;
     bool accepting = true;
+    /// <inheritdoc />
+    public FrameAnalyzer NativeAnalyzer => this;
+    /// <inheritdoc />
     public Guid SessionId { get; private set; } = Guid.NewGuid();
+    /// <inheritdoc />
     public event EventHandler<FaceFrameObservation>? FrameObserved;
+    /// <inheritdoc />
     public float MinBrightness { get; set; } = 0.18f;
+    /// <inheritdoc />
     public float MaxBrightness { get; set; } = 0.92f;
+    /// <inheritdoc />
     public float MinSharpness { get; set; } = 8f;
 
     public void BeginSession()

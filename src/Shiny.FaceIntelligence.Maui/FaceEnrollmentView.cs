@@ -55,7 +55,7 @@ public class FaceEnrollmentView : ContentView
     Task cameraWork = Task.CompletedTask;
     int cameraGeneration;
 
-    FaceRecognitionAnalyzer? analyzer;
+    IFaceRecognitionAnalyzer? analyzer;
     IFaceEmbedder? embedder;
     IFaceIntelligence? intelligence;
     bool started;
@@ -385,11 +385,11 @@ public class FaceEnrollmentView : ContentView
     {
         if (this.analyzer is not null)
         {
-            this.camera.Analyzer = this.analyzer;
+            this.camera.Analyzer = this.analyzer.NativeAnalyzer;
             return;
         }
 
-        this.analyzer = this.Resolve<FaceRecognitionAnalyzer>();
+        this.analyzer = this.Resolve<IFaceRecognitionAnalyzer>();
         this.embedder = this.Resolve<IFaceEmbedder>();
         this.intelligence = this.Resolve<IFaceIntelligence>();
         if (this.analyzer is null)
@@ -410,7 +410,7 @@ public class FaceEnrollmentView : ContentView
             this.guideOverlay.Invalidate();
             this.SetHint(FaceEnrollmentRejection.NoFace);
         };
-        this.camera.Analyzer = this.analyzer;
+        this.camera.Analyzer = this.analyzer.NativeAnalyzer;
     }
 
     async Task StartCameraAsync()
