@@ -1,4 +1,5 @@
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.Graphics;
 using Shiny.Controls.Camera;
 using Shiny.Maui.Controls.Camera;
 
@@ -33,6 +34,8 @@ namespace Shiny.FaceIntelligence.Maui;
 public class FaceRecognitionView : ContentView
 {
     readonly CameraView camera;
+    readonly GraphicsView guideOverlay;
+    readonly FaceGuideDrawable guideDrawable = new();
     IFaceRecognitionAnalyzer? analyzer;
     bool started;
     long lifecycle;
@@ -46,7 +49,8 @@ public class FaceRecognitionView : ContentView
             Facing = CameraFacing.Front,
             ScaleMode = PreviewScaleMode.AspectFill
         };
-        this.Content = this.camera;
+        this.guideOverlay = new GraphicsView { Drawable = this.guideDrawable, InputTransparent = true, IsVisible = false };
+        this.Content = new Grid { Children = { this.camera, this.guideOverlay } };
 
         // Whichever of these lands last actually starts the camera; StartCameraAsync is idempotent.
         this.camera.HandlerChanged += (_, _) => this.Start();
@@ -68,6 +72,22 @@ public class FaceRecognitionView : ContentView
     /// <summary>Raised on the UI thread for every recognition attempt, including a no-match.</summary>
     public event EventHandler<FaceRecognizedEventArgs>? FaceRecognized;
     public event EventHandler<FaceFrameObservation>? FrameObserved;
+    /// <summary>Live guide alignment. This is visual guidance, not a recognition verdict.</summary>
+    public event EventHandler<FaceGuideFeedback>? GuideFeedbackChanged;
+    /// <summary>Optional view-space oval; recognition still processes the full image.</summary>
+    public FaceGuide? Guide { get; set; }
+    /// <summary>Shows Shiny's guide without adding an instruction banner or changing recognition policy.</summary>
+    public bool ShowGuide { get => this.guideOverlay.IsVisible; set => this.guideOverlay.IsVisible = value; }
+    /// <summary>Checks a frame against the same guide geometry used by the overlay.</summary>
+    public bool? IsInsideGuide(FaceFrameObservation observation)
+    {
+        if (this.Guide is not { } guide || observation.FaceCount != 1 || observation.Bounds is not { } bounds
+            || observation.ImageWidth <= 0 || observation.ImageHeight <= 0) return null;
+        var width = this.guideOverlay.Width > 0 ? this.guideOverlay.Width : this.Width;
+        var height = this.guideOverlay.Height > 0 ? this.guideOverlay.Height : this.Height;
+        var viewAspect = width > 0 && height > 0 ? (float)(width / height) : 1f;
+        return guide.ToImageSpace((float)observation.ImageWidth / observation.ImageHeight, viewAspect).IsAligned(bounds);
+    }
     public event EventHandler? AnalyzerReady;
     public static readonly BindableProperty IsActiveProperty = BindableProperty.Create(
         nameof(IsActive), typeof(bool), typeof(FaceRecognitionView), true,
@@ -186,9 +206,31 @@ public class FaceRecognitionView : ContentView
 
         this.analyzer.RecognitionEnabled = this.RecognitionEnabled;
         this.analyzer.FaceRecognized += (s, e) => this.FaceRecognized?.Invoke(this, e);
-        this.analyzer.FrameObserved += (s, e) => this.FrameObserved?.Invoke(this, e);
+        this.analyzer.FrameObserved += (s, e) =>
+        {
+            this.UpdateGuide(e);
+            this.FrameObserved?.Invoke(this, e);
+        };
         this.camera.Analyzer = this.analyzer.NativeAnalyzer;
         AnalyzerReady?.Invoke(this, EventArgs.Empty);
+    }
+
+    void UpdateGuide(FaceFrameObservation observation)
+    {
+        if (this.Guide is not { } guide) return;
+        this.guideDrawable.Face = observation.FaceCount == 1 ? observation.Bounds : null;
+        if (observation.ImageWidth > 0 && observation.ImageHeight > 0)
+            this.guideDrawable.ImageAspect = (float)observation.ImageWidth / observation.ImageHeight;
+        var width = this.guideOverlay.Width > 0 ? this.guideOverlay.Width : this.Width;
+        var height = this.guideOverlay.Height > 0 ? this.guideOverlay.Height : this.Height;
+        var viewAspect = width > 0 && height > 0 ? (float)(width / height) : 1f;
+        this.guideDrawable.Guide = guide.ToImageSpace(this.guideDrawable.ImageAspect, viewAspect);
+        var aligned = this.IsInsideGuide(observation);
+        this.guideDrawable.IsAligned = aligned == true;
+        this.guideOverlay.Invalidate();
+        this.GuideFeedbackChanged?.Invoke(this, new FaceGuideFeedback(aligned,
+            aligned == false && observation.Bounds is { } bounds
+                ? this.guideDrawable.Guide.Correction(bounds) : null));
     }
 
     async Task StartCameraAsync()

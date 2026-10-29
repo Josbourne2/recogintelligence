@@ -203,6 +203,10 @@ public class FaceEnrollmentView : ContentView
 
     /// <summary>Raised when the current step or the captured count changes.</summary>
     public event EventHandler<FaceEnrollmentProgress>? Progress;
+    /// <summary>Countdown ticks for caller-owned presentation; capture remains gated by Shiny.</summary>
+    public event EventHandler<FaceEnrollmentCountdown>? CountdownChanged;
+    /// <summary>Live alignment guidance independently of the built-in banner.</summary>
+    public event EventHandler<FaceGuideFeedback>? GuideFeedbackChanged;
 
     /// <summary>Raised when a candidate frame is turned down, with a ready-to-show hint.</summary>
     public event EventHandler<FaceEnrollmentRejected>? Rejected;
@@ -224,6 +228,20 @@ public class FaceEnrollmentView : ContentView
     {
         get => this.guideOverlay.IsVisible;
         set { this.guideOverlay.IsVisible = value; this.banner.IsVisible = value; }
+    }
+
+    /// <summary>Whether the guide is drawn over the camera, independently of the instruction banner.</summary>
+    public bool ShowGuide
+    {
+        get => this.guideOverlay.IsVisible;
+        set => this.guideOverlay.IsVisible = value;
+    }
+
+    /// <summary>Whether the built-in instruction, hint and progress banner is visible.</summary>
+    public bool ShowInstructionBanner
+    {
+        get => this.banner.IsVisible;
+        set => this.banner.IsVisible = value;
     }
 
     /// <summary>Raised when the camera can't be started, with the reason.</summary>
@@ -263,10 +281,12 @@ public class FaceEnrollmentView : ContentView
         this.countdownRemaining = Math.Max(1, (int)Math.Ceiling(this.StepCountdown.TotalSeconds));
         // The concrete guide is recomputed per frame (it depends on the frame aspect); this just clears any
         // stale outline from the previous step until the next detection arrives.
-        this.guideDrawable.Guide = null;
+        this.guideDrawable.Guide = this.runSteps[this.stepIndex].Guide;
         this.guideDrawable.IsAligned = false;
         this.guideOverlay.Invalidate();
         this.ReportProgress();
+        this.CountdownChanged?.Invoke(this, new FaceEnrollmentCountdown(this.stepIndex,
+            this.StepCountdown <= TimeSpan.Zero ? 0 : this.countdownRemaining));
         this.hintLabel.Text = $"Get ready… {this.countdownRemaining}";
 
         if (this.StepCountdown <= TimeSpan.Zero)
@@ -291,6 +311,7 @@ public class FaceEnrollmentView : ContentView
             if (this.countdownRemaining > 0)
             {
                 this.hintLabel.Text = $"Get ready… {this.countdownRemaining}";
+                this.CountdownChanged?.Invoke(this, new FaceEnrollmentCountdown(this.stepIndex, this.countdownRemaining));
                 return;
             }
 
@@ -298,6 +319,7 @@ public class FaceEnrollmentView : ContentView
             this.armed = true;
             this.armedAt = DateTimeOffset.UtcNow;
             this.hintLabel.Text = "Hold still…";
+            this.CountdownChanged?.Invoke(this, new FaceEnrollmentCountdown(this.stepIndex, 0));
         };
         return timer;
     }
@@ -408,6 +430,7 @@ public class FaceEnrollmentView : ContentView
             this.guideDrawable.Face = null;
             this.guideDrawable.IsAligned = false;
             this.guideOverlay.Invalidate();
+            this.GuideFeedbackChanged?.Invoke(this, new FaceGuideFeedback(null, "Move into the outline"));
             this.SetHint(FaceEnrollmentRejection.NoFace);
         };
         this.camera.Analyzer = this.analyzer.NativeAnalyzer;
@@ -520,6 +543,8 @@ public class FaceEnrollmentView : ContentView
         this.guideDrawable.Guide = guide;
         this.guideDrawable.IsAligned = guide?.IsAligned(face.Bounds) ?? true;
         this.guideOverlay.Invalidate();
+        this.GuideFeedbackChanged?.Invoke(this, new FaceGuideFeedback(this.guideDrawable.IsAligned,
+            guide is not null && !this.guideDrawable.IsAligned ? guide.Correction(face.Bounds) : null));
 
         if (this.evaluating)
             return;
