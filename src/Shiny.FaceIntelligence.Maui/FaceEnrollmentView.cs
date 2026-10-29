@@ -287,9 +287,9 @@ public class FaceEnrollmentView : ContentView
     {
         this.armed = false;
         this.countdownRemaining = Math.Max(1, (int)Math.Ceiling(this.StepCountdown.TotalSeconds));
-        // The concrete guide is recomputed per frame (it depends on the frame aspect); this just clears any
-        // stale outline from the previous step until the next detection arrives.
-        this.guideDrawable.Guide = this.runSteps[this.stepIndex].Guide;
+        // Draw the next guide immediately during the countdown. Reproject it again when the
+        // first analyzed frame supplies the camera's exact image aspect.
+        this.guideDrawable.Guide = this.EffectiveGuide(this.runSteps[this.stepIndex], this.guideDrawable.ImageAspect);
         this.AbortAnimation("FaceGuideAlignment");
         this.guideDrawable.IsAligned = false;
         this.guideDrawable.AlignmentProgress = 0;
