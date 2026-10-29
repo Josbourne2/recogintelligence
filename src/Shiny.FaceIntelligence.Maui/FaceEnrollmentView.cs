@@ -63,6 +63,7 @@ public class FaceEnrollmentView : ContentView
     bool running;
     bool evaluating;
     int stepIndex;
+    bool? lastGuideAligned;
 
     IDispatcherTimer? countdownTimer;
     int countdownRemaining;
@@ -237,6 +238,13 @@ public class FaceEnrollmentView : ContentView
         set => this.guideOverlay.IsVisible = value;
     }
 
+    /// <summary>Colours used by the optional face guide.</summary>
+    public Color GuideScrimColor { get => this.guideDrawable.ScrimColor; set { this.guideDrawable.ScrimColor = value; this.guideOverlay.Invalidate(); } }
+    public Color GuideAlignedColor { get => this.guideDrawable.AlignedColor; set { this.guideDrawable.AlignedColor = value; this.guideOverlay.Invalidate(); } }
+    public Color GuideUnalignedColor { get => this.guideDrawable.UnalignedColor; set { this.guideDrawable.UnalignedColor = value; this.guideOverlay.Invalidate(); } }
+    /// <summary>Duration of the guide colour transition; zero keeps the original immediate feedback.</summary>
+    public TimeSpan GuideTransitionDuration { get; set; }
+
     /// <summary>Whether the built-in instruction, hint and progress banner is visible.</summary>
     public bool ShowInstructionBanner
     {
@@ -282,7 +290,10 @@ public class FaceEnrollmentView : ContentView
         // The concrete guide is recomputed per frame (it depends on the frame aspect); this just clears any
         // stale outline from the previous step until the next detection arrives.
         this.guideDrawable.Guide = this.runSteps[this.stepIndex].Guide;
+        this.AbortAnimation("FaceGuideAlignment");
         this.guideDrawable.IsAligned = false;
+        this.guideDrawable.AlignmentProgress = 0;
+        this.lastGuideAligned = null;
         this.guideOverlay.Invalidate();
         this.ReportProgress();
         this.CountdownChanged?.Invoke(this, new FaceEnrollmentCountdown(this.stepIndex,
@@ -345,6 +356,7 @@ public class FaceEnrollmentView : ContentView
         this.running = false;
         this.armed = false;
         this.countdownTimer?.Stop();
+        this.AbortAnimation("FaceGuideAlignment");
         this.guideDrawable.Guide = null;
         this.guideDrawable.Face = null;
         this.guideOverlay.Invalidate();
@@ -428,7 +440,7 @@ public class FaceEnrollmentView : ContentView
         this.analyzer.FaceLost += (_, _) =>
         {
             this.guideDrawable.Face = null;
-            this.guideDrawable.IsAligned = false;
+            this.UpdateGuideAlignment(false);
             this.guideOverlay.Invalidate();
             this.GuideFeedbackChanged?.Invoke(this, new FaceGuideFeedback(null, "Move into the outline"));
             this.SetHint(FaceEnrollmentRejection.NoFace);
@@ -495,6 +507,7 @@ public class FaceEnrollmentView : ContentView
         this.running = false;
         this.armed = false;
         this.countdownTimer?.Stop();
+        this.AbortAnimation("FaceGuideAlignment");
 
         if (!this.started)
             return;
@@ -541,7 +554,7 @@ public class FaceEnrollmentView : ContentView
         this.guideDrawable.Face = face.Bounds;
         this.guideDrawable.ImageAspect = face.Aspect;
         this.guideDrawable.Guide = guide;
-        this.guideDrawable.IsAligned = guide?.IsAligned(face.Bounds) ?? true;
+        this.UpdateGuideAlignment(guide?.IsAligned(face.Bounds) ?? true);
         this.guideOverlay.Invalidate();
         this.GuideFeedbackChanged?.Invoke(this, new FaceGuideFeedback(this.guideDrawable.IsAligned,
             guide is not null && !this.guideDrawable.IsAligned ? guide.Correction(face.Bounds) : null));
@@ -592,6 +605,27 @@ public class FaceEnrollmentView : ContentView
         // Everything past here decodes and embeds, so it runs off the UI thread, one at a time.
         this.evaluating = true;
         this.evaluationWork = this.EvaluateAsync(face, step, this.run, this.stepIndex);
+    }
+
+    void UpdateGuideAlignment(bool aligned)
+    {
+        this.guideDrawable.IsAligned = aligned;
+        if (this.lastGuideAligned == aligned) return;
+        this.lastGuideAligned = aligned;
+        this.AbortAnimation("FaceGuideAlignment");
+        var start = this.guideDrawable.AlignmentProgress ?? (aligned ? 0f : 1f);
+        var target = aligned ? 1f : 0f;
+        if (this.GuideTransitionDuration <= TimeSpan.Zero || this.Handler is null)
+        {
+            this.guideDrawable.AlignmentProgress = target;
+            this.guideOverlay.Invalidate();
+            return;
+        }
+        new Animation(value =>
+        {
+            this.guideDrawable.AlignmentProgress = (float)value;
+            this.guideOverlay.Invalidate();
+        }, start, target).Commit(this, "FaceGuideAlignment", length: (uint)this.GuideTransitionDuration.TotalMilliseconds);
     }
 
     async Task EvaluateAsync(AnalyzedFace face, FaceEnrollmentStep step, FaceEnrollmentRun activeRun, int originalStep)

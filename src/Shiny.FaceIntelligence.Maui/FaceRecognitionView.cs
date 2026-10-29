@@ -36,6 +36,7 @@ public class FaceRecognitionView : ContentView
     readonly CameraView camera;
     readonly GraphicsView guideOverlay;
     readonly FaceGuideDrawable guideDrawable = new();
+    bool? lastGuideAligned;
     IFaceRecognitionAnalyzer? analyzer;
     bool started;
     long lifecycle;
@@ -78,6 +79,12 @@ public class FaceRecognitionView : ContentView
     public FaceGuide? Guide { get; set; }
     /// <summary>Shows Shiny's guide without adding an instruction banner or changing recognition policy.</summary>
     public bool ShowGuide { get => this.guideOverlay.IsVisible; set => this.guideOverlay.IsVisible = value; }
+    /// <summary>Colours used by the optional guide.</summary>
+    public Color GuideScrimColor { get => this.guideDrawable.ScrimColor; set { this.guideDrawable.ScrimColor = value; this.guideOverlay.Invalidate(); } }
+    public Color GuideAlignedColor { get => this.guideDrawable.AlignedColor; set { this.guideDrawable.AlignedColor = value; this.guideOverlay.Invalidate(); } }
+    public Color GuideUnalignedColor { get => this.guideDrawable.UnalignedColor; set { this.guideDrawable.UnalignedColor = value; this.guideOverlay.Invalidate(); } }
+    /// <summary>Duration of the guide colour transition; zero keeps the original immediate feedback.</summary>
+    public TimeSpan GuideTransitionDuration { get; set; }
     /// <summary>Checks a frame against the same guide geometry used by the overlay.</summary>
     public bool? IsInsideGuide(FaceFrameObservation observation)
     {
@@ -226,11 +233,32 @@ public class FaceRecognitionView : ContentView
         var viewAspect = width > 0 && height > 0 ? (float)(width / height) : 1f;
         this.guideDrawable.Guide = guide.ToImageSpace(this.guideDrawable.ImageAspect, viewAspect);
         var aligned = this.IsInsideGuide(observation);
-        this.guideDrawable.IsAligned = aligned == true;
+        this.UpdateGuideAlignment(aligned == true);
         this.guideOverlay.Invalidate();
         this.GuideFeedbackChanged?.Invoke(this, new FaceGuideFeedback(aligned,
             aligned == false && observation.Bounds is { } bounds
                 ? this.guideDrawable.Guide.Correction(bounds) : null));
+    }
+
+    void UpdateGuideAlignment(bool aligned)
+    {
+        this.guideDrawable.IsAligned = aligned;
+        if (this.lastGuideAligned == aligned) return;
+        this.lastGuideAligned = aligned;
+        this.AbortAnimation("FaceGuideAlignment");
+        var start = this.guideDrawable.AlignmentProgress ?? (aligned ? 0f : 1f);
+        var target = aligned ? 1f : 0f;
+        if (this.GuideTransitionDuration <= TimeSpan.Zero || this.Handler is null)
+        {
+            this.guideDrawable.AlignmentProgress = target;
+            this.guideOverlay.Invalidate();
+            return;
+        }
+        new Animation(value =>
+        {
+            this.guideDrawable.AlignmentProgress = (float)value;
+            this.guideOverlay.Invalidate();
+        }, start, target).Commit(this, "FaceGuideAlignment", length: (uint)this.GuideTransitionDuration.TotalMilliseconds);
     }
 
     async Task StartCameraAsync()
@@ -279,6 +307,9 @@ public class FaceRecognitionView : ContentView
     /// </remarks>
     void Stop()
     {
+        this.AbortAnimation("FaceGuideAlignment");
+        this.lastGuideAligned = null;
+        this.guideDrawable.AlignmentProgress = 0;
         if (this.hostPage is { } page)
         {
             page.Disappearing -= this.OnHostPageDisappearing;

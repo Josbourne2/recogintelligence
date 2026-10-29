@@ -5,6 +5,10 @@
 ```csharp
 enrollment.ShowGuide = true;
 enrollment.ShowInstructionBanner = false;
+enrollment.GuideUnalignedColor = Colors.Gold;
+enrollment.GuideAlignedColor = Colors.Green;
+enrollment.GuideScrimColor = Color.FromRgba(0, 0, 0, 0.35f);
+enrollment.GuideTransitionDuration = TimeSpan.FromMilliseconds(250);
 enrollment.StepCountdown = TimeSpan.FromSeconds(3);
 enrollment.CountdownChanged += (_, tick) => ShowCountdown(tick.SecondsRemaining);
 enrollment.GuideFeedbackChanged += (_, feedback) => ShowAlignment(feedback.IsAligned, feedback.Hint);
@@ -18,6 +22,7 @@ The countdown gates capture inside the library. At zero, enrollment waits until 
 ```csharp
 recognition.Guide = new FaceGuide(Height: 0.73f);
 recognition.ShowGuide = true;
+recognition.GuideTransitionDuration = TimeSpan.FromMilliseconds(250);
 recognition.GuideFeedbackChanged += (_, feedback) => ShowAlignment(feedback.IsAligned, feedback.Hint);
 ```
 
