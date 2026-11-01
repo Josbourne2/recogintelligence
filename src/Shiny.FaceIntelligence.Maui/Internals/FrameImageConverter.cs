@@ -26,9 +26,9 @@ sealed partial class FrameImageConverter
     public partial SKBitmap? ToUpright(CameraFrame frame, int maxWidth);
 
     /// <summary>
-    /// Apply the frame's sensor rotation and front-camera mirror so the scene is upright. The mirror is
-    /// applied in <i>sensor</i> space (before the rotation) because that's where the flip physically happens —
-    /// Skia composes the matrix so the last transform applied is the innermost one.
+    /// Rotate the sensor image upright, then mirror horizontally in upright space to match CameraFrame
+    /// and CoordinateTransform. Skia composes the matrix so Scale is called before Rotate: the source
+    /// pixels are rotated first and the upright result is mirrored afterwards.
     /// </summary>
     internal static SKBitmap Orient(SKBitmap src, int rotationDegrees, bool mirrored)
     {
@@ -44,9 +44,9 @@ sealed partial class FrameImageConverter
         using (var canvas = new SKCanvas(dst))
         {
             canvas.Translate(w / 2f, h / 2f);
-            canvas.RotateDegrees(rot);
             if (mirrored)
                 canvas.Scale(-1, 1);
+            canvas.RotateDegrees(rot);
             canvas.Translate(-src.Width / 2f, -src.Height / 2f);
             canvas.DrawBitmap(src, new SKPoint(0, 0), SKSamplingOptions.Default);
         }
