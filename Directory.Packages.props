@@ -8,9 +8,9 @@
         <PackageVersion Include="Microsoft.ML.OnnxRuntime" Version="1.31.1"/>
         <PackageVersion Include="SkiaSharp" Version="4.154.0"/>
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.14"/>
-        <PackageVersion Include="Shiny.DocumentDb" Version="14.1.0"/>
-        <PackageVersion Include="Shiny.DocumentDb.Sqlite" Version="14.1.0"/>
-        <PackageVersion Include="Shiny.DocumentDb.Sqlite.VectorSupport" Version="14.1.0"/>
+        <PackageVersion Include="Shiny.DocumentDb" Version="14.2.1-sober-0001"/>
+        <PackageVersion Include="Shiny.DocumentDb.Sqlite" Version="14.2.1-sober-0001"/>
+        <PackageVersion Include="Shiny.DocumentDb.Sqlite.VectorSupport" Version="14.2.0"/>
         <!-- Security floor: 2.1.11 (pulled by Microsoft.Data.Sqlite) is GHSA-2m69-gcr7-jv3q. -->
         <PackageVersion Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.14"/>
         <PackageVersion Include="Xamarin.GooglePlayServices.MLKit.DocumentScanner" Version="116.0.0.4"/>
@@ -19,8 +19,8 @@
     </ItemGroup>
     <ItemGroup>
         <!-- Test-only: FaceGuide/FaceGuideDrawable compile into the net10.0 face tests. Keep in step with MAUI. -->
-        <PackageVersion Include="Microsoft.Maui.Graphics" Version="10.0.120"/>
-        <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.120"/>
+        <PackageVersion Include="Microsoft.Maui.Graphics" Version="10.0.130"/>
+        <PackageVersion Include="Microsoft.Maui.Controls" Version="10.0.130"/>
         <PackageVersion Include="Microsoft.Extensions.Logging.Debug" Version="10.0.14"/>
         <PackageVersion Include="Shiny.Maui.Shell" Version="7.0.3"/>
         <PackageVersion Include="Shiny.Extensions.MauiHosting" Version="5.3.1"/>
